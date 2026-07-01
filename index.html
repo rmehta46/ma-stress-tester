@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M&A Supply Chain Stress Tester</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+  :root{--bg:#0a0c0f;--surface:#111318;--surface2:#181c22;--border:#1e2530;--border2:#2a3342;--text:#e2e8f0;--muted:#64748b;--dim:#94a3b8;--green:#22c55e;--green-dim:#16a34a22;--red:#ef4444;--red-dim:#dc262622;--yellow:#f59e0b;--yellow-dim:#d9770622;--blue:#3b82f6;--accent:#6366f1;--accent-dim:#4f46e522;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;line-height:1.5;min-height:100vh;}
+  .topbar{border-bottom:1px solid var(--border);padding:0 32px;height:48px;display:flex;align-items:center;justify-content:space-between;background:var(--surface);}
+  .logo{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:13px;color:var(--accent);letter-spacing:.05em;}
+  .logo span{color:var(--muted);font-weight:400;}
+  .tag{font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--accent-dim);color:var(--accent);padding:2px 8px;border-radius:3px;letter-spacing:.08em;margin-left:12px;}
+  #clock{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+  .main{max-width:1100px;margin:0 auto;padding:32px 32px 80px;}
+  .input-panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:28px 32px;margin-bottom:24px;}
+  .panel-label{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:20px;}
+  .input-row{display:grid;grid-template-columns:1fr 1fr 200px;gap:16px;align-items:end;}
+  .input-group{display:flex;flex-direction:column;gap:8px;}
+  .input-group label{font-size:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+  .ticker-wrap{position:relative;}
+  .ticker-wrap input{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:10px 14px 10px 42px;font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--text);letter-spacing:.08em;text-transform:uppercase;transition:border-color .15s;}
+  .ticker-wrap input:focus{outline:none;border-color:var(--accent);}
+  .ticker-wrap input::placeholder{color:var(--muted);font-weight:400;font-size:13px;letter-spacing:.02em;text-transform:none;}
+  .ticker-badge{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:10px;font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:.08em;}
+  .badge-a{color:var(--blue);}.badge-t{color:var(--green);}
+  .run-btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:11px 24px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:14px;cursor:pointer;transition:opacity .15s;white-space:nowrap;}
+  .run-btn:hover{opacity:.88;}.run-btn:disabled{opacity:.35;cursor:not-allowed;}
+  .disclaimer{margin-top:14px;font-size:11px;color:var(--muted);line-height:1.6;padding:10px 14px;background:var(--bg);border-radius:5px;border-left:2px solid var(--border2);}
+  .progress-panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin-bottom:24px;display:none;}
+  .progress-panel.visible{display:block;}
+  .progress-steps{display:flex;flex-direction:column;gap:10px;}
+  .step{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--muted);}
+  .step.active{color:var(--text);}.step.done{color:var(--green);}.step.error{color:var(--red);}
+  .step-icon{font-family:'IBM Plex Mono',monospace;font-size:12px;width:20px;text-align:center;}
+  .spinner{display:inline-block;animation:spin 1s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #results{display:none;}
+  #results.visible{display:block;}
+  .deal-header{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:24px 32px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;}
+  .deal-title{display:flex;align-items:center;gap:14px;}
+  .deal-title .co{font-size:20px;font-weight:600;}
+  .deal-title .arrow{color:var(--muted);font-size:18px;}
+  .deal-score-wrap{text-align:right;}
+  .deal-score-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.1em;margin-bottom:4px;}
+  .deal-score{font-family:'IBM Plex Mono',monospace;font-size:36px;font-weight:600;}
+  .deal-score.low{color:var(--green);}.deal-score.medium{color:var(--yellow);}.deal-score.high{color:var(--red);}
+  .deal-verdict{font-size:12px;padding:4px 12px;border-radius:20px;font-weight:500;display:inline-block;margin-top:4px;}
+  .verdict-low{background:var(--green-dim);color:var(--green);}
+  .verdict-medium{background:var(--yellow-dim);color:var(--yellow);}
+  .verdict-high{background:var(--red-dim);color:var(--red);}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+  .full-col{margin-bottom:16px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px 24px;}
+  .card-title{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+  .card-title .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;}
+  .card-title .dot.green{background:var(--green);}.card-title .dot.red{background:var(--red);}.card-title .dot.yellow{background:var(--yellow);}
+  .metric-row{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--border);gap:12px;}
+  .metric-row:last-child{border-bottom:none;}
+  .metric-label{color:var(--muted);font-size:12px;}
+  .metric-val{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;color:var(--text);text-align:right;}
+  .metric-val.pos{color:var(--green);}.metric-val.neg{color:var(--red);}.metric-val.warn{color:var(--yellow);}.metric-val.na{color:var(--muted);font-weight:400;}
+  .comp-header{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--border2);margin-bottom:2px;}
+  .comp-header span{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:var(--muted);}
+  .comp-header span:nth-child(2){color:var(--blue);}.comp-header span:nth-child(3){color:var(--green);}
+  .comp-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);}
+  .comp-row:last-child{border-bottom:none;}
+  .comp-row span{font-size:12px;}.comp-row span:first-child{color:var(--muted);}
+  .comp-row span:not(:first-child){font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);}
+  .risk-flag{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:5px;margin-bottom:8px;font-size:13px;line-height:1.5;}
+  .risk-flag:last-child{margin-bottom:0;}
+  .risk-flag.high{background:var(--red-dim);border-left:2px solid var(--red);}
+  .risk-flag.medium{background:var(--yellow-dim);border-left:2px solid var(--yellow);}
+  .risk-flag.low{background:var(--green-dim);border-left:2px solid var(--green);}
+  .flag-icon{font-size:14px;flex-shrink:0;margin-top:1px;}
+  .flag-label{font-weight:600;margin-right:6px;}
+  .ai-section{line-height:1.7;color:var(--dim);font-size:13px;}
+  .ai-section h4{font-size:12px;font-family:'IBM Plex Mono',monospace;color:var(--accent);letter-spacing:.06em;margin:14px 0 6px;}
+  .ai-section h4:first-child{margin-top:0;}
+  .ai-section p{margin-bottom:8px;}
+  .ai-section strong{color:var(--text);font-weight:500;}
+  .result-footer{margin-top:24px;padding:14px 20px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
+  .result-footer span{font-family:'IBM Plex Mono',monospace;}
+  .error-box{background:var(--red-dim);border:1px solid #dc262633;border-radius:8px;padding:16px 20px;color:var(--red);font-size:13px;display:none;margin-bottom:16px;}
+  .error-box.visible{display:block;}
+  .built-by{text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#1e2530;margin-top:48px;letter-spacing:.06em;}
+  @media(max-width:700px){.input-row,.two-col{grid-template-columns:1fr;}.main{padding:20px 16px 60px;}}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div style="display:flex;align-items:center;">
+    <div class="logo">M&A<span> / </span>SC STRESS</div>
+    <div class="tag">BETA</div>
+  </div>
+  <div id="clock"></div>
+</div>
+<div class="main">
+  <div class="input-panel">
+    <div class="panel-label">Deal parameters</div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>Acquirer ticker</label>
+        <div class="ticker-wrap">
+          <span class="ticker-badge badge-a">ACQ</span>
+          <input type="text" id="acquirer" placeholder="e.g. MSFT" maxlength="6"/>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Target ticker</label>
+        <div class="ticker-wrap">
+          <span class="ticker-badge badge-t">TGT</span>
+          <input type="text" id="target" placeholder="e.g. ATVI" maxlength="6"/>
+        </div>
+      </div>
+      <button class="run-btn" id="runBtn" onclick="runAnalysis()">Run stress test →</button>
+    </div>
+    <div class="disclaimer"><strong>Data sources:</strong> Yahoo Finance (live financials) · Claude AI with web search (supply chain intelligence) · Figures pulled in real-time. N/A shown where data unavailable. Not investment advice.</div>
+  </div>
+  <div class="progress-panel" id="progressPanel">
+    <div class="panel-label">Running analysis</div>
+    <div class="progress-steps" id="progressSteps"></div>
+  </div>
+  <div class="error-box" id="errorBox"></div>
+  <div id="results">
+    <div class="deal-header">
+      <div>
+        <div class="deal-title">
+          <span class="co" id="rAcqName" style="color:var(--blue)">—</span>
+          <span class="arrow">acquires</span>
+          <span class="co" id="rTgtName" style="color:var(--green)">—</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;" id="rIndustries">—</div>
+      </div>
+      <div class="deal-score-wrap">
+        <div class="deal-score-label">INTEGRATION DIFFICULTY</div>
+        <div class="deal-score" id="rScore">—</div>
+        <div class="deal-verdict" id="rVerdict">—</div>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title"><div class="dot"></div>Financial snapshot</div>
+        <div class="comp-header"><span>Metric</span><span id="hAcq">ACQ</span><span id="hTgt">TGT</span></div>
+        <div id="compRows"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="dot yellow"></div>Post-merger working capital model</div>
+        <div id="wcModel"></div>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title"><div class="dot red"></div>Supply chain risk flags</div>
+        <div id="riskFlags"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="dot green"></div>AI supply chain intelligence</div>
+        <div class="ai-section" id="aiIntel"></div>
+      </div>
+    </div>
+    <div class="full-col">
+      <div class="card">
+        <div class="card-title"><div class="dot"></div>Integration recommendations</div>
+        <div class="ai-section" id="aiRecs"></div>
+      </div>
+    </div>
+    <div class="result-footer">
+      <span>Sources: Yahoo Finance · Claude AI + Web Search</span>
+      <span id="rTimestamp">—</span>
+    </div>
+  </div>
+  <div class="built-by">built by rudra mehta · w.p. carey school of business · asu</div>
+</div>
+<script>
+const VERCEL_URL = '';
+
+function updateClock(){const n=new Date();document.getElementById('clock').textContent=n.toUTCString().split(' ')[4]+' UTC';}
+setInterval(updateClock,1000);updateClock();
+
+const fmt={
+  money:v=>v==null?'N/A':v>=1e12?`$${(v/1e12).toFixed(2)}T`:v>=1e9?`$${(v/1e9).toFixed(2)}B`:v>=1e6?`$${(v/1e6).toFixed(1)}M`:`$${Number(v).toLocaleString()}`,
+  pct:v=>v==null?'N/A':`${(v*100).toFixed(1)}%`,
+  days:v=>v==null?'N/A':`${Math.round(v)}d`,
+};
+
+const STEPS=[
+  {id:'s1',label:'Fetching acquirer financials from Yahoo Finance'},
+  {id:'s2',label:'Fetching target financials from Yahoo Finance'},
+  {id:'s3',label:'Searching live supply chain & geopolitical intelligence'},
+  {id:'s4',label:'Running working capital & integration model'},
+  {id:'s5',label:'Generating acquisition risk brief'},
+];
+
+function initProgress(){
+  document.getElementById('progressSteps').innerHTML=STEPS.map(s=>`<div class="step" id="${s.id}"><span class="step-icon">○</span><span>${s.label}</span></div>`).join('');
+}
+function setStep(id,state){
+  const el=document.getElementById(id);if(!el)return;
+  el.className=`step ${state}`;
+  const icon=el.querySelector('.step-icon');
+  if(state==='active')icon.innerHTML='<span class="spinner">◌</span>';
+  else if(state==='done')icon.textContent='✓';
+  else if(state==='error')icon.textContent='✕';
+  else icon.textContent='○';
+}
+
+async function fetchYahoo(ticker){
+  const url=`https://query1.finance.yahoo.com/v10/finance/quoteSummary/${ticker.toUpperCase()}?modules=financialData,defaultKeyStatistics,summaryDetail,incomeStatementHistory,balanceSheetHistory`;
+  const proxy=`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+  const res=await fetch(proxy,{signal:AbortSignal.timeout(15000)});
+  if(!res.ok)throw new Error(`HTTP ${res.status}`);
+  const outer=await res.json();
+  const data=JSON.parse(outer.contents);
+  if(data.quoteSummary?.error)throw new Error(data.quoteSummary.error.description||'Yahoo error');
+  const result=data.quoteSummary?.result?.[0];
+  if(!result)throw new Error('No data for '+ticker);
+  const fd=result.financialData||{};
+  const is=result.incomeStatementHistory?.incomeStatementHistory?.[0]||{};
+  const bs=result.balanceSheetHistory?.balanceSheetHistory?.[0]||{};
+  const rev=fd.totalRevenue?.raw??null;
+  const gp=is.grossProfit?.raw??null;
+  const grossMargin=rev&&gp?gp/rev:(fd.grossMargins?.raw??null);
+  const inventory=bs.inventory?.raw??null;
+  const cogs=is.costOfRevenue?.raw??null;
+  const inventoryDays=inventory&&cogs&&cogs>0?(inventory/cogs)*365:null;
+  const currentAssets=bs.totalCurrentAssets?.raw??null;
+  const currentLiabilities=bs.totalCurrentLiabilities?.raw??null;
+  const workingCapital=currentAssets!=null&&currentLiabilities!=null?currentAssets-currentLiabilities:null;
+  return{
+    ticker:ticker.toUpperCase(),revenue:rev,grossMargin,inventory,inventoryDays,
+    workingCapital,currentAssets,currentLiabilities,
+    totalDebt:fd.totalDebt?.raw??null,ebitda:fd.ebitda?.raw??null,
+  };
+}
+
+async function runAnalysis(){
+  const acqTicker=document.getElementById('acquirer').value.trim().toUpperCase();
+  const tgtTicker=document.getElementById('target').value.trim().toUpperCase();
+  if(!acqTicker||!tgtTicker){showError('Enter both tickers.');return;}
+  if(acqTicker===tgtTicker){showError('Acquirer and target must be different.');return;}
+  if(!VERCEL_URL){showError('Vercel URL not set yet — see setup instructions.');return;}
+
+  document.getElementById('runBtn').disabled=true;
+  document.getElementById('results').classList.remove('visible');
+  document.getElementById('errorBox').classList.remove('visible');
+  document.getElementById('progressPanel').classList.add('visible');
+  initProgress();
+
+  let acqData={ticker:acqTicker},tgtData={ticker:tgtTicker};
+
+  setStep('s1','active');
+  try{acqData=await fetchYahoo(acqTicker);setStep('s1','done');}
+  catch(e){setStep('s1','error');}
+
+  setStep('s2','active');
+  try{tgtData=await fetchYahoo(tgtTicker);setStep('s2','done');}
+  catch(e){setStep('s2','error');}
+
+  setStep('s3','active');setStep('s4','active');setStep('s5','active');
+  try{
+    const res=await fetch(`${VERCEL_URL}/api/analyze`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({acquirer:acqTicker,target:tgtTicker,acqData,tgtData}),
+      signal:AbortSignal.timeout(60000),
+    });
+    if(!res.ok){const e=await res.json();throw new Error(e.error||'API error');}
+    const data=await res.json();
+    setStep('s3','done');setStep('s4','done');setStep('s5','done');
+    renderResults(acqData,tgtData,data.ai);
+  }catch(e){
+    ['s3','s4','s5'].forEach(s=>setStep(s,'error'));
+    showError('Analysis failed: '+e.message);
+    document.getElementById('runBtn').disabled=false;
+    return;
+  }
+  document.getElementById('runBtn').disabled=false;
+}
+
+function renderResults(acq,tgt,ai){
+  document.getElementById('progressPanel').classList.remove('visible');
+  document.getElementById('rAcqName').textContent=ai.acqFullName||acq.ticker;
+  document.getElementById('rTgtName').textContent=ai.tgtFullName||tgt.ticker;
+  document.getElementById('rIndustries').textContent=`${ai.acqIndustry||acq.ticker} → ${ai.tgtIndustry||tgt.ticker}`;
+  document.getElementById('hAcq').textContent=acq.ticker;
+  document.getElementById('hTgt').textContent=tgt.ticker;
+
+  const score=ai.integrationScore||50;
+  const scoreEl=document.getElementById('rScore'),verdictEl=document.getElementById('rVerdict');
+  scoreEl.textContent=score+'/100';
+  if(score>=70){scoreEl.className='deal-score high';verdictEl.textContent='High Integration Risk';verdictEl.className='deal-verdict verdict-high';}
+  else if(score>=40){scoreEl.className='deal-score medium';verdictEl.textContent='Moderate Integration Risk';verdictEl.className='deal-verdict verdict-medium';}
+  else{scoreEl.className='deal-score low';verdictEl.textContent='Low Integration Risk';verdictEl.className='deal-verdict verdict-low';}
+
+  const compData=[
+    {label:'Revenue (TTM)',a:fmt.money(acq.revenue),t:fmt.money(tgt.revenue)},
+    {label:'Gross margin',a:fmt.pct(acq.grossMargin),t:fmt.pct(tgt.grossMargin)},
+    {label:'Inventory days',a:fmt.days(acq.inventoryDays),t:fmt.days(tgt.inventoryDays)},
+    {label:'Working capital',a:fmt.money(acq.workingCapital),t:fmt.money(tgt.workingCapital)},
+    {label:'Total debt',a:fmt.money(acq.totalDebt),t:fmt.money(tgt.totalDebt)},
+    {label:'EBITDA',a:fmt.money(acq.ebitda),t:fmt.money(tgt.ebitda)},
+  ];
+  document.getElementById('compRows').innerHTML=compData.map(r=>`<div class="comp-row"><span>${r.label}</span><span>${r.a}</span><span>${r.t}</span></div>`).join('');
+
+  const combinedRev=(acq.revenue||0)+(tgt.revenue||0);
+  const combinedWC=acq.workingCapital!=null&&tgt.workingCapital!=null?acq.workingCapital+tgt.workingCapital:null;
+  const combinedInv=acq.inventory!=null&&tgt.inventory!=null?acq.inventory+tgt.inventory:null;
+  const combinedDebt=acq.totalDebt!=null&&tgt.totalDebt!=null?acq.totalDebt+tgt.totalDebt:null;
+  const invDelta=acq.inventoryDays!=null&&tgt.inventoryDays!=null?tgt.inventoryDays-acq.inventoryDays:null;
+  const wcRows=[
+    {label:'Combined revenue',val:fmt.money(combinedRev||null),cls:''},
+    {label:'Combined working capital',val:fmt.money(combinedWC),cls:combinedWC>0?'pos':'neg'},
+    {label:'Combined inventory',val:fmt.money(combinedInv),cls:''},
+    {label:'Combined debt load',val:fmt.money(combinedDebt),cls:combinedDebt>combinedRev*0.5?'warn':''},
+    {label:'Inventory days delta',val:invDelta==null?'N/A':`${invDelta>0?'+':''}${Math.round(invDelta)}d`,cls:invDelta>15?'warn':invDelta<-15?'pos':''},
+  ];
+  let wcHtml=wcRows.map(r=>`<div class="metric-row"><span class="metric-label">${r.label}</span><span class="metric-val ${r.cls}">${r.val}</span></div>`).join('');
+  if(ai.workingCapitalNote)wcHtml+=`<div style="margin-top:12px;font-size:12px;color:var(--dim);line-height:1.6;padding-top:10px;border-top:1px solid var(--border);">${ai.workingCapitalNote}</div>`;
+  document.getElementById('wcModel').innerHTML=wcHtml;
+
+  const flagIcons={high:'⚠',medium:'◆',low:'●'};
+  document.getElementById('riskFlags').innerHTML=(ai.riskFlags||[]).map(f=>`<div class="risk-flag ${f.level}"><span class="flag-icon">${flagIcons[f.level]||'●'}</span><span><span class="flag-label">${f.label}:</span>${f.detail}</span></div>`).join('');
+
+  document.getElementById('aiIntel').innerHTML=`
+    <h4>// ACQUIRER SUPPLY CHAIN</h4><p>${ai.acqSupplyChain||'Unavailable.'}</p>
+    <h4>// TARGET SUPPLY CHAIN</h4><p>${ai.tgtSupplyChain||'Unavailable.'}</p>
+    <h4>// SUPPLIER OVERLAP RISK</h4><p>${ai.overlapRisk||'Unavailable.'}</p>
+    <h4>// GEOPOLITICAL EXPOSURE (2026)</h4><p>${ai.geopoliticalRisks||'Unavailable.'}</p>
+    ${ai.inventoryNote?`<h4>// INVENTORY ANALYSIS</h4><p>${ai.inventoryNote}</p>`:''}`;
+
+  document.getElementById('aiRecs').innerHTML=(ai.recommendations||[]).map((rec,i)=>`<p style="margin-bottom:10px;"><strong style="color:var(--accent);font-family:'IBM Plex Mono',monospace;font-size:11px;margin-right:8px;">[${String(i+1).padStart(2,'0')}]</strong>${rec}</p>`).join('');
+
+  document.getElementById('rTimestamp').textContent='Generated '+new Date().toUTCString();
+  document.getElementById('results').classList.add('visible');
+  document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function showError(msg){
+  const el=document.getElementById('errorBox');
+  el.textContent='⚠ '+msg;
+  el.classList.add('visible');
+  document.getElementById('progressPanel').classList.remove('visible');
+}
+
+['acquirer','target'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown',e=>{if(e.key==='Enter')runAnalysis();});
+});
+</script>
+</body>
+</html>
